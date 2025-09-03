@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Project Proposal Card Deck</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    /* ===== Base (monochrome + pink accent) ===== */
+    :root{
+      --bg:#ffffff;
+      --fg:#111111;
+      --muted:#6b6b6b;
+      --line:#d9d9d9;
+      --accent:#e91e63; /* single highlight color */
+    }
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0; background:var(--bg); color:var(--fg);
+      font-family: Arial, Helvetica, sans-serif; line-height:1.45;
+    }
+    a{ color:var(--accent); text-decoration:none; }
+    a:hover{ text-decoration:underline; }
+
+    /* ===== Layout ===== */
+    .wrap{
+      display:grid; grid-template-columns: 380px 1fr; gap: 1.25rem; min-height:100dvh;
+    }
+    @media (max-width: 900px){
+      .wrap{ grid-template-columns: 1fr; }
+    }
+
+    /* ===== Sidebar (sticky prompt/results) ===== */
+    .sidebar{
+      position: sticky; top: 0; align-self: start;
+      border-right:1px solid var(--line); min-height:100dvh;
+      padding: 1rem 1rem 2rem; background:var(--bg);
+      display:flex; flex-direction:column; gap:1rem;
+      min-width:0; /* enable wrapping inside */
+    }
+    @media (max-width: 900px){
+      .sidebar{ position: static; min-height:auto; border-right:none; border-bottom:1px solid var(--line); }
+    }
+    .title{ margin:.2rem 0 0; font-size:1.1rem; letter-spacing:.2px; font-weight:700; }
+    .subtitle{ margin:.25rem 0 0; color:var(--muted); font-size:.95rem; }
+
+    .controls{ display:flex; flex-wrap:wrap; gap:.5rem; margin-top:.25rem; }
+    .btn{
+      appearance:none; border:2px solid var(--fg); background:transparent; color:var(--fg);
+      font-weight:700; padding:.55rem .8rem; cursor:pointer; font-size:.95rem;
+    }
+    .btn:hover{ background:#f5f5f5; }
+    .btn.primary{ border-color:var(--accent); color:var(--accent); }
+
+    .result{
+      border:1px solid var(--line); padding:.9rem; margin-top:.25rem;
+      min-width:0;
+    }
+    .badges{
+      display:flex; flex-wrap:wrap; gap:.4rem; margin:0 0 .5rem;
+      min-width:0;
+    }
+    .badge{
+      display:inline-flex; gap:.4rem; align-items:center;
+      border:1px solid var(--fg); padding:.28rem .55rem; font-weight:700; font-size:.9rem;
+      white-space:normal; max-width:100%; /* no overflow */
+    }
+    .badge .label{
+      font-size:.7rem; text-transform:uppercase; letter-spacing:.3px; color:var(--muted);
+      flex:0 0 auto;
+    }
+    .badge .txt{
+      flex:1 1 auto; overflow-wrap:anywhere; word-break:break-word;
+    }
+    .badge.highlight{ border-color:var(--accent); color:var(--accent); }
+    .hr{ border-top:1px solid var(--line); margin:.9rem 0; }
+    .result-sentence{ margin-top:.4rem; font-size:1rem; }
+
+    /* ===== Decks ===== */
+    .main{ padding:1rem 1rem 3rem; }
+    .suit{
+      border-bottom:1px solid var(--line); padding:1.25rem 0;
+    }
+    .suit:last-child{ border-bottom:none; }
+    .suit h2{
+      margin:0 0 .15rem; font-size:1rem; text-transform:uppercase; letter-spacing:.3px;
+    }
+    .suit .lead{
+      margin:0 0 .8rem; color:var(--muted); font-size:.95rem;
+    }
+    .deck{
+      display:grid; gap:.5rem; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    }
+    .card{
+      border:1px solid var(--line); padding:.7rem .8rem; font-size:.95rem; background:#fff; cursor:pointer;
+    }
+    .card:hover{ border-color:#bfbfbf; }
+    .draw-row{ margin-top:.7rem; display:flex; align-items:center; gap:.6rem; flex-wrap:wrap; }
+    .draw-btn{
+      appearance:none; border:1px solid var(--fg); background:transparent; color:var(--fg);
+      padding:.45rem .7rem; cursor:pointer; font-weight:700; font-size:.9rem;
+    }
+    .draw-btn:hover{ background:#f5f5f5; }
+    .draw-out{ color:var(--accent); font-weight:700; }
+
+    /* Accent underline for section headers */
+    .suit h2 span{ border-bottom:2px solid var(--accent); padding-bottom:2px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <!-- ============= Sidebar (sticky) ============= -->
+    <aside class="sidebar">
+      <div>
+        <h1 class="title">Project Proposal Card Deck</h1>
+        <p class="subtitle"></p>
+      </div>
+
+      <div class="controls">
+        <button class="btn primary" id="drawFull">Reshuffle / Draw Full Project</button>
+        <button class="btn" id="clearAll">Clear</button>
+      </div>
+
+      <div class="result" id="resultCard">
+        <div class="badges" id="badgeRow"><!-- badges injected --></div>
+        <div class="hr"></div>
+        <div class="result-sentence" id="sentence">
+          Use <strong style="color:var(--accent)">Reshuffle</strong> or click any card to build your prompt.
+        </div>
+      </div>
+
+      <p class="subtitle">Click a card in any deck; updates the selection here.</p>
+    </aside>
+
+    <!-- ============= Main (Decks) ============= -->
+    <main class="main" id="suitsContainer"></main>
+  </div>
+
+  <script>
+    // ----- Data: suits & items -----
+    const suits = [
+      { key:"theme",  name:"THEME / TOPIC", lead:"domains of interest →", items:[
+        "Climate crisis and adaptation",
+        "Migration and borders",
+        "Food and agriculture",
+        "Public space / commons",
+        "Memory and archives",
+        "Play and games",
+        "Housing and shelter",
+        "Surveillance and control",
+        "Infrastructure and logistics",
+        "Care and kinship",
+        "Digital labor",
+        "Oceans and water",
+        "(your own theme)"
+      ]},
+      { key:"method", name:"METHOD", lead:"approaches or practices you might use →", items:[
+        "Mapping",
+        "Storytelling / narrative",
+        "Sensing / data collection",
+        "Prototyping",
+        "Simulation",
+        "Performance",
+        "Speculative design",
+        "Critical making",
+        "Policy analysis",
+        "Archival research",
+        "Ethnography",
+        "Diagramming / drawing",
+        "Coding / scripting / software",
+        "Collaboration / co-design"
+      ]},
+      { key:"tech",   name:"TECHNOLOGIES", lead:"specific tools, infrastructures, or platforms →", items:[
+        "GIS / geospatial software",
+        "Machine learning models",
+        "Microcontrollers (Arduino, Raspberry Pi)",
+        "Drones",
+        "3D printing",
+        "Blockchain / ledgers",
+        "Data storage",
+        "Web platforms",
+        "Game engines (Unity, Unreal)",
+        "Social media APIs",
+        "VR/AR headsets",
+        "Chatbots / conversational agents",
+        "Fabrication labs (CNC, laser cutting)",
+        "Printing"
+      ]},
+      { key:"scale",  name:"SCALE", lead:"from the intimate to the planetary →", items:[
+        "Body",
+        "Room",
+        "Building",
+        "Neighborhood",
+        "City",
+        "Region",
+        "State",
+        "Ocean",
+        "Globe",
+        "Extraterrestrial"
+      ]},
+      { key:"repr",   name:"REPRESENTATION", lead:"how it gets communicated or embodied →", items:[
+        "Map",
+        "Diagram",
+        "Data visualization",
+        "Website",
+        "Exhibition",
+        "Film / video",
+        "Performance",
+        "Prototype / object",
+        "Publication (zine, book, catalogue)",
+        "Installation",
+        "Sound piece / podcast",
+        "Speculative scenario"
+      ]},
+      { key:"audience", name:"AUDIENCE / STAKEHOLDER", lead:"who the work is for, with, or against →", items:[
+        "General public",
+        "Policymakers",
+        "Activists",
+        "Artists / designers",
+        "Community groups",
+        "Scholars",
+        "Future generations (e.g. people in 2200)",
+        "Secrets",
+        "Non-human actors (plants, animals, ecosystems)"
+      ]},
+      { key:"constraint", name:"CONSTRAINT / OPPORTUNITY", lead:"limits invite creativity →", items:[
+        "No electricity / low-tech only",
+        "Collective authorship — no single “author”",
+        "Must use only open-source tools",
+        "Only text, no images",
+        "Budget: under $100",
+        "Must be portable or ephemeral",
+        "Designed for 24-hour use only",
+        "No internet connection allowed",
+        "Audience must be co-creators, not just consumers"
+      ]},
+      { key:"funding", name:"PROJECT LIFECYCLE — Funding / Resources", lead:"imagine how projects live in the world →", items:[
+        "Grant-funded",
+        "Commissioned by an institution",
+        "Crowdsourced or community supported",
+        "Self-funded / DIY",
+        "Volunteer labor only",
+        "Gift or barter economy"
+      ]},
+      { key:"maint",   name:"PROJECT LIFECYCLE — Maintenance / Care", lead:"imagine how projects live in the world →", items:[
+        "Maintained by a community",
+        "Abandoned after launch",
+        "Updated quarterly",
+        "Automated self-care (scripts, sensors)",
+        "Needs a dedicated steward"
+      ]},
+      { key:"archive", name:"PROJECT LIFECYCLE — Archiving / Deletion", lead:"imagine how projects live in the world →", items:[
+        "Preserved in a library/archive",
+        "Exists only as a live performance",
+        "Digitally archived but not maintained",
+        "Deleted intentionally (built to vanish)",
+        "Transformed into a new project over time",
+        "Handed over to another group"
+      ]}
+    ];
+
+    // ----- Utilities -----
+    const $ = (sel, root=document) => root.querySelector(sel);
+    const el = (tag, cls, html) => { const n=document.createElement(tag); if(cls) n.className=cls; if(html!==undefined) n.innerHTML=html; return n; };
+    const rand = arr => arr[Math.floor(Math.random()*arr.length)];
+
+    // ----- Build decks -----
+    const suitsContainer = $('#suitsContainer');
+    suits.forEach(s => {
+      const section = el('section','suit');
+      section.appendChild(el('h2', null, `<span>${s.name}</span>`));
+      section.appendChild(el('p','lead', s.lead));
+
+      const deck = el('div','deck');
+      s.items.forEach(val => {
+        const c = el('div','card', val);
+        // Clicking a card updates the left-hand selection
+        c.addEventListener('click', () => {
+          updateOneBadge(s.key, val);
+          // quick visual nudge
+          c.style.borderColor = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+          setTimeout(()=>{ c.style.borderColor = getComputedStyle(document.documentElement).getPropertyValue('--line').trim(); }, 350);
+        });
+        deck.appendChild(c);
+      });
+
+      const controls = el('div','draw-row');
+      const btn = el('button','draw-btn', `Draw ${s.name.split(' — ')[0].split(' / ')[0]}`);
+      const out = el('span','draw-out','');
+      btn.addEventListener('click', ()=>{
+        const pick = rand(s.items);
+        out.textContent = '→ ' + pick;
+        updateOneBadge(s.key, pick);
+      });
+
+      controls.append(btn, out);
+      section.append(deck, controls);
+      suitsContainer.appendChild(section);
+    });
+
+    // ----- Sidebar (badges + sentence) -----
+    const badgeRow = $('#badgeRow');
+    const sentence = $('#sentence');
+    const current = Object.fromEntries(suits.map(s => [s.key, '(not drawn)']));
+    render();
+
+    function updateOneBadge(key, label){
+      current[key] = label;
+      render();
+    }
+
+    function drawFull(){
+      suits.forEach(s => current[s.key] = rand(s.items));
+      render();
+    }
+
+    function clearAll(){
+      Object.keys(current).forEach(k => current[k] = '(not drawn)');
+      render();
+    }
+
+    function render(){
+      // badges
+      badgeRow.innerHTML = '';
+      suits.forEach(s=>{
+        const b = el('span','badge');
+        const lab = el('span','label', s.name.split(' — ')[0].split(' / ')[0]);
+        const txt = el('span','txt', current[s.key]);
+        if (current[s.key] !== '(not drawn)') b.classList.add('highlight');
+        b.append(lab, txt);
+        badgeRow.appendChild(b);
+      });
+
+      // sentence
+      const get = k => current[k];
+      sentence.innerHTML = [
+        'A project about ',
+        `<strong style="color:var(--accent)">${get('theme')}</strong>`,
+        ' using ',
+        `<strong style="color:var(--accent)">${get('method')}</strong>`,
+        ' with ',
+        `<strong style="color:var(--accent)">${get('tech')}</strong>`,
+        ', at the ',
+        `<strong style="color:var(--accent)">${get('scale')}</strong>`,
+        ' scale, represented as a ',
+        `<strong style="color:var(--accent)">${get('repr')}</strong>`,
+        ', for ',
+        `<strong style="color:var(--accent)">${get('audience')}</strong>`,
+        ', under the constraint ',
+        `<strong style="color:var(--accent)">${get('constraint')}</strong>`,
+        ', funded by ',
+        `<strong style="color:var(--accent)">${get('funding')}</strong>`,
+        ', maintained as ',
+        `<strong style="color:var(--accent)">${get('maint')}</strong>`,
+        ', with an afterlife of ',
+        `<strong style="color:var(--accent)">${get('archive')}</strong>`,
+        '.'
+      ].join('');
+    }
+
+    // ----- Wire controls -----
+    $('#drawFull').addEventListener('click', drawFull);
+    $('#clearAll').addEventListener('click', clearAll);
+  </script>
+</body>
+</html>
