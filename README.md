@@ -3,7 +3,7 @@ A card game to scaffold speculative concepts and weave interconnected ideas to i
 
 Inspired by:
 The Carrier Bag Of Fiction 
-by Ursula K. Le Guin 1986 
+by Ursula K. Le Guin, 1986 
 
 (excerpt)
 
