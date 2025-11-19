@@ -1,0 +1,1 @@
+A card game to scaffold speculative concepts and weave interconnected ideas to imagine artifacts that exist in alternative realities. Through layered storytelling and world-hinting, participants explore how objects, technologies, or systems might function, are funded, maintained and cared for in alternative realities. 
